@@ -81,7 +81,7 @@ useEffect(()=>{
            ): shouldShowPosts?(
                      <p className='text-light-4 mt-10 text-center w-full'>End of Post</p>
            ): posts.pages.map((item,index)=>(
-              <GridPostList key={index} posts={item.documents}/>
+              <GridPostList key={index} posts={item?.documents}/>
            ))}
            </div>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+
 import './index.css'
 import { Route,Routes } from 'react-router-dom'
 import SigninForm from './_auth/forms/SigninForm'
@@ -12,7 +12,6 @@ import RootLayout from './_root/RootLayout'
 
 // the main function here===================>
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
    <main className='flex h-screen'>

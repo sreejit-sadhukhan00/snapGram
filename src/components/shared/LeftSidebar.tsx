@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+
 import { Link, useNavigate,useLocation } from 'react-router-dom'
 import { Button } from '../ui/button'
 import { useSignOutAccount } from '@/lib/react-query/queries&mutations'
@@ -8,7 +8,7 @@ import Loader from './Loader';
 // function starts================>
 function LeftSidebar() {
   const navigate=useNavigate();
-  const {mutate:signOut,isSuccess}=useSignOutAccount();
+  const {mutate:signOut}=useSignOutAccount();
   const {pathname}=useLocation();
   const { user, setUser, setIsAuthenticated, isLoading } = useUserContext();
 

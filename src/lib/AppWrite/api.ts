@@ -2,8 +2,6 @@ import { ID, Query } from "appwrite";
 
 import { appwriteConfig, account, database, storage, avatars } from "./config";
 import { IUpdatePost, INewPost, INewUser, IUpdateUser } from "@/Types";
-import { Upload } from "lucide-react";
-import { log } from "console";
 
 // ============================================================
 // AUTH
@@ -184,26 +182,28 @@ export async function uploadFile(file:File){
 
 
 // file preview
-export async function getFilePreview(fileId:string){
-  type ImageGravity = "center" | "top" | "bottom" | "left" | "right";
-
+export async function getFilePreview(fileId: string | Promise<string | URL>): Promise<string | URL | undefined> {
   try {
-    const fileurl= storage.getFilePreview(
+    const resolvedFileId = await fileId;
+    const fileIdAsString = typeof resolvedFileId === "string" ? resolvedFileId : resolvedFileId.toString();
+
+    // Get the file preview URL
+    const fileUrl = storage.getFilePreview(
       appwriteConfig.storageId,
-      fileId,
+      fileIdAsString,
+      2000, // width
+      2000, // height
+      undefined, // imageGravity
+      100 // quality
+    );
 
-      2000, //width
-      2000, //height
-      undefined,//imagegravity
-      100,//quality
-
-    )
-     return fileurl;
+    return fileUrl; // Return the URL
   } catch (error) {
-    console.log(error);
-   }
+    console.error("Error getting file preview:", error);
+    return undefined; // Explicitly return undefined on error
+  }
 }
- 
+
 
 // delete file
 export async function deleteFile(fileID:string) {
@@ -391,7 +391,7 @@ export async function deletePost(postId:string,imageId:string){     if(!postId |
 }
 
 // get infinite post
-export async function getInfinitePost({pageParam}:{pageParam:number}) {
+export async function getInfinitePost({ pageParam }: { pageParam:Number }) {
   console.log("Page Param:", pageParam);
 
    const queries:any[]= [Query.orderDesc('$updatedAt'),Query.limit(10)];
@@ -416,9 +416,7 @@ export async function getInfinitePost({pageParam}:{pageParam:number}) {
     } catch (error) {
       console.log(error);
     }
-  
-
-}
+ }
 // search post
 export async function searchPost(searchTerm:string) {
     try {
@@ -429,11 +427,12 @@ export async function searchPost(searchTerm:string) {
         appwriteConfig.postCollectionId,
         [Query.search('Caption',searchTerm)]
        )
-       if(!posts)throw Error;
+       if(!posts)throw Error("no post found");
         
        return posts;
     } catch (error) {
       console.log(error);
+      return undefined;
      }
    }
 
@@ -467,7 +466,7 @@ export async function updateUser(user: IUpdateUser) {
       if (!uploadedFile) throw Error;
 
       // Get new file url
-      const fileUrl = getFilePreview(uploadedFile.$id);
+      const fileUrl =await getFilePreview(uploadedFile.$id);
       if (!fileUrl) {
         await deleteFile(uploadedFile.$id);
         throw Error;

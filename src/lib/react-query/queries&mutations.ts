@@ -7,7 +7,6 @@ from '@tanstack/react-query'
 import { createPost, createUserAccount, deletePost, deleteSavedPost, editPost, getCurrentUser, getInfinitePost, getPostById, getRecentPosts, getUserById, getUsers, likePost, savePost, searchPost, signInAccount, signOutAccount, updateUser } from '../AppWrite/api'
 import { INewPost, INewUser, IUpdatePost, IUpdateUser } from '@/Types'
 import { QUERY_KEYS } from './queryKeys';
-import { Postdetails } from '@/_root/Pages';
 
 export const useCreateUserAccount = () => {
     return useMutation({
@@ -151,7 +150,7 @@ export const useDeleteedPost=()=>{
   const queryCLient=useQueryClient();
   return useMutation({
     mutationFn:({postId,imageId}:{postId:string,imageId:string})=>deletePost(postId,imageId),
-    onSuccess:(data)=>{
+    onSuccess:()=>{
       queryCLient.invalidateQueries({
         queryKey:[QUERY_KEYS.GET_RECENT_POSTS]
       })
@@ -162,17 +161,18 @@ export const useDeleteedPost=()=>{
 // use Getpost
 export const useGetPosts = () => {
   return useInfiniteQuery({
-    queryKey:[QUERY_KEYS.GET_INFINITE_POSTS],
-    queryFn:getInfinitePost,
-    getNextPageParam:(lastPage)=>{
-       
-      if(lastPage && lastPage.documents.length===0) {
+    queryKey: [QUERY_KEYS.GET_INFINITE_POSTS],
+    queryFn: getInfinitePost,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage || lastPage.documents.length === 0) {
         return null;
       }
-      const lastId=lastPage.documents[lastPage.documents.length - 1].$id;
+      const lastId = lastPage?.documents[lastPage.documents.length - 1].$id;
       
-      return lastId;
-    }
+      // Convert the string ID to a number or return null
+      return lastId ? parseInt(lastId, 10) : null;
+    },
+    initialPageParam: 0 // Add this to specify the initial page parameter
   })
 };
 
