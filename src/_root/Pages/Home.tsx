@@ -10,6 +10,7 @@ function Home() {
   // const posts=null
 
   const{data:posts,isPending:isPostLoading}=useGetRecentPost();
+  console.log(posts)
   return (
     <div className="flex flex-1">
           <div className="home-container">

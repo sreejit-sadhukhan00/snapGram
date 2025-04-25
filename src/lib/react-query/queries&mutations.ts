@@ -127,9 +127,10 @@ export const useGetCurrentUser=()=>{
 // get post by id
 export const useGetPostById=(postId:string)=>{
   return useQuery({
-    queryKey:[QUERY_KEYS.GET_POST_BY_ID,postId],
+    queryKey:['post', postId],
     queryFn:()=>getPostById(postId),
-    enabled: !!postId
+    enabled: !!postId, // Only run the query if postId exists
+    retry: 1,          // Only retry once on failure
   })
 }
 

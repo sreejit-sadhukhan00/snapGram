@@ -32,45 +32,39 @@ const SigninForm = () => {
   const { mutateAsync: signInAccount } = useSignInAccount();
   // Handler
   const handleSignup = async (values: z.infer<typeof SigninValidationshema>) => {
-   
+    try {
       // sign in 
-      try {
-        const session = await signInAccount({
-          email: values.email,
-          password: values.password,
-        }); 
-        if (!session) {
-          console.log("toast 1 disp");
-          
-          return toast({title:'sign in failed'})
-        }
-        
-    
-        // is logged in or not--->
-        const isLoggedIn = await checkAuthUser();
-           
-        if (isLoggedIn) {
-          form.reset();
-          console.log("navigating");
-          
-          navigate("/");
-        } 
-        else {
-          toast({ 
-            title: "Authentication Failed", 
-            description: "Could not log in after signup",
-            variant: "destructive" 
-          });
-          console.log("toast 2 disp");
-        }
+      const session = await signInAccount({
+        email: values.email,
+        password: values.password,
+      });
+      console.log("Signed in successfully:", session);
       
+      if (!session) {
+        return toast({title:'Sign in failed'});
+      }
+      
+      // is logged in or not--->
+      const isLoggedIn = await checkAuthUser();
+      console.log("Logged in status:", isLoggedIn);
+      
+      if (isLoggedIn) {
+        form.reset();
+        navigate("/");
+      } else {
+        toast({ 
+          title: "Authentication Failed", 
+          description: "Could not log in after signup",
+          variant: "destructive" 
+        });
+      }
     } catch (error) {
+      console.error("Signin error:", error);
       toast({ 
         title: "Signin Error", 
         description: JSON.stringify(error),
         variant: "destructive" 
       });
-      console.log("toast 3 disp");
     }
   };
 

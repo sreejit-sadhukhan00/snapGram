@@ -1,5 +1,3 @@
-
-
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
@@ -41,7 +39,7 @@ const SignupForm = () => {
 
       // new account-->
       const newUser = await createUserAccount(values);
-      console.log("account created");
+      console.log("Account created:", newUser);
       
       if (!newUser) {
         toast({ 
@@ -51,39 +49,17 @@ const SignupForm = () => {
         return;
       }
       
-      // sign in 
-      try {
-        const session = await signInAccount({
-          email: values.email,
-          password: values.password,
-        });
-         console.log("signed in");
-         console.log("Session details:", session);
-        if (!session) {
-          return toast({title:'sign in failed'})
-        }
-        
-    
-        // is logged in or not--->
-        const isLoggedIn = await checkAuthUser();
-           console.log("logged in");
-           
-        if (isLoggedIn) {
-          form.reset();
-          navigate("/");
-        } 
-        else {
-          toast({ 
-            title: "Authentication Failed", 
-            description: "Could not log in after signup",
-            variant: "destructive" 
-          });
-        }
-      } catch (signInError) {
-        console.error("Sign in error:", signInError);
+      // Automatically signed in after account creation
+      const isLoggedIn = await checkAuthUser();
+      console.log("Logged in status:", isLoggedIn);
+      
+      if (isLoggedIn) {
+        form.reset();
+        navigate("/");
+      } else {
         toast({ 
-          title: "Sign In Failed", 
-          description: JSON.stringify(signInError),
+          title: "Authentication Failed", 
+          description: "Could not log in after signup",
           variant: "destructive" 
         });
       }

@@ -29,6 +29,9 @@ export async function createUserAccount(user: INewUser) {
       imageUrl: avatarUrl,
     });
 
+    // Automatically sign in the user after account creation
+    await signInAccount({ email: user.email, password: user.password });
+
     return newUser;
   } catch (error) {
     console.log(error);
@@ -60,22 +63,24 @@ export async function saveUserToDB(user: {
 
 // ============================== SIGN IN
 export async function signInAccount(user: { email: string; password: string }) {
-    try {
-      // Destroy existing sessions more safely
-      //  await account.deleteSessions();
-  
-      const session = await account.createEmailPasswordSession(user.email, user.password);
-      
-      // More robust error checking
-      if (!session) {
-        throw new Error("Session creation failed");
-      }
-  
-      return session;
-    } catch (error) {
-      console.error("SignInAccount Error:", error);
+  try {
+    // Destroy existing sessions more safely
+    await account.deleteSessions();
+
+    const session = await account.createEmailPasswordSession(user.email, user.password);
+    
+    // More robust error checking
+    if (!session) {
+      throw new Error("Session creation failed");
     }
+
+    console.log("Session created successfully:", session);
+    return session;
+  } catch (error) {
+    console.error("SignInAccount Error:", error);
+    throw error; // Re-throw the error to be caught by the calling function
   }
+}
 
 // ============================== GET ACCOUNT
 export async function getAccount() {
@@ -123,31 +128,31 @@ export async function signOutAccount(){
 export async function createPost(post:INewPost) {
   try {
     // upload image to storage
-    const uploadedFile=await uploadFile(post.file[0]);
+    const uploadedFile = await uploadFile(post.file[0]);
 
     if(!uploadedFile) throw Error;
 
     // get file url
-    const fileUrl= await getFilePreview(uploadedFile.$id);
+    const fileUrl = await getFileView(uploadedFile.$id);
     if(!fileUrl){
       deleteFile(uploadedFile.$id)
       throw Error;
     }
-// tags into array
-    const tags=post.tags?.replace(/ /g,'').split(',') || [];
+    // tags into array
+    const tags = post.tags?.replace(/ /g,'').split(',') || [];
 
     // save post to db
-    const newpost=await database.createDocument(
+    const newpost = await database.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
       ID.unique(),
       {
-        creator:post.userId,
-        Caption:post.caption,
-        imageUrl:fileUrl,
-        imageId:uploadedFile.$id,
-        location:post.location,
-        tags:tags,
+        creator: post.userId,
+        caption: post.caption,  // Changed from Caption to caption
+        imageUrl: fileUrl,
+        imageId: uploadedFile.$id,
+        location: post.location,
+        tags: tags,
       }
     )
 
@@ -181,26 +186,22 @@ export async function uploadFile(file:File){
 }
 
 
-// file preview
-export async function getFilePreview(fileId: string | Promise<string | URL>): Promise<string | URL | undefined> {
+// file view
+export async function getFileView(fileId: string | Promise<string | URL>): Promise<string | URL | undefined> {
   try {
     const resolvedFileId = await fileId;
     const fileIdAsString = typeof resolvedFileId === "string" ? resolvedFileId : resolvedFileId.toString();
 
-    // Get the file preview URL
-    const fileUrl = storage.getFilePreview(
+    // Use getFileDownload instead of getFileView to avoid transformations
+    const fileUrl = storage.getFileDownload(
       appwriteConfig.storageId,
-      fileIdAsString,
-      2000, // width
-      2000, // height
-      undefined, // imageGravity
-      100 // quality
+      fileIdAsString
     );
 
-    return fileUrl; // Return the URL
+    return fileUrl;
   } catch (error) {
-    console.error("Error getting file preview:", error);
-    return undefined; // Explicitly return undefined on error
+    console.error("Error getting file view:", error);
+    return undefined;
   }
 }
 
@@ -303,21 +304,18 @@ export async function deleteSavedPost(savedRecordId:string) {
 
 // get post by id
 
-export async function getPostById(postId:string){
-     
+export async function getPostById(postId: string) {
   try {
-     const post=await database.getDocument(
+    const post = await database.getDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
       postId
-     )
-     if(!post) throw Error;
-
-     return post;
-
+    );
+    if (!post) throw Error;
+    return post;
   } catch (error) {
     console.log(error);
-     }
+  }
 }
 
 // editpost
@@ -333,13 +331,13 @@ export async function editPost(post:IUpdatePost) {
       const uploadedFile=await uploadFile(post.file[0]);
       if(!uploadedFile) throw Error;
 
-          // get file url
-    const fileUrl= await getFilePreview(uploadedFile.$id);
-    if(!fileUrl){
-      deleteFile(uploadedFile.$id)
-      throw Error;
-    }
-    image={...image,imageUrl:fileUrl,imageId:uploadedFile.$id}
+      // get file url
+      const fileUrl = await getFileView(uploadedFile.$id);
+      if(!fileUrl){
+        deleteFile(uploadedFile.$id)
+        throw Error;
+      }
+      image={...image,imageUrl:fileUrl,imageId:uploadedFile.$id}
     }
 
 // tags into array
@@ -466,13 +464,13 @@ export async function updateUser(user: IUpdateUser) {
       if (!uploadedFile) throw Error;
 
       // Get new file url
-      const fileUrl =await getFilePreview(uploadedFile.$id);
+      const fileUrl = await getFileView(uploadedFile.$id);  // Changed from getFilePreview to getFileView
       if (!fileUrl) {
         await deleteFile(uploadedFile.$id);
         throw Error;
       }
 
-      image = { ...image, imageUrl:fileUrl, imageId: uploadedFile.$id };
+      image = { ...image, imageUrl: fileUrl, imageId: uploadedFile.$id };
     }
 
     //  Update user
@@ -529,5 +527,43 @@ export async function getUsers(limit?: number) {
     return users;
   } catch (error) {
     console.log(error);
+  }
+}
+
+// Example migration script
+export async function updatePostImageUrls() {
+  try {
+    const posts = await database.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.postCollectionId
+    );
+    
+    for (const post of posts.documents) {
+      // Extract file ID from the existing URL
+      const urlParts = post.imageUrl.split('/');
+      const fileId = urlParts[urlParts.length - 2]; // Assuming URL structure is consistent
+      
+      // Generate new URL
+      const newUrl = storage.getFileView(
+        appwriteConfig.storageId,
+        fileId
+      );
+      
+      // Update the post
+      await database.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.postCollectionId,
+        post.$id,
+        {
+          imageUrl: newUrl
+        }
+      );
+      
+      console.log(`Updated post ${post.$id}`);
+    }
+    
+    console.log("All posts updated successfully");
+  } catch (error) {
+    console.error("Error updating posts:", error);
   }
 }
